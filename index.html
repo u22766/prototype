@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeEngine — Personal Trading Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-deep: #0a0a18;
+    --bg-base: #0d0d1a;
+    --bg-card: #1a1a2e;
+    --bg-card-inner: #12122a;
+    --border: #2a2a4a;
+    --border-dim: #333;
+    --text-primary: #e0e0e0;
+    --text-secondary: #888;
+    --text-dim: #666;
+    --text-faint: #444;
+    --accent-green: #00e676;
+    --accent-blue: #64b5f6;
+    --accent-yellow: #ffc107;
+    --accent-red: #ff5252;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-data: 'Space Mono', monospace;
+    --font-ui: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    padding-bottom: 48px;
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-deep);
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #000;
+  }
+  .header-title { font-size: 18px; font-weight: 700; font-family: var(--font-mono); letter-spacing: -0.5px; }
+  .header-badge {
+    font-size: 10px; color: var(--text-dim); padding: 2px 8px;
+    background: var(--bg-card); border-radius: 4px; font-family: var(--font-mono);
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .header-status { font-size: 12px; color: var(--text-secondary); font-family: var(--font-data); }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 4px;
+    background: var(--accent-green); box-shadow: 0 0 8px #00e67666;
+  }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex; gap: 0; padding: 0 24px;
+    border-bottom: 1px solid var(--bg-card); background: var(--bg-deep);
+  }
+  .tab {
+    padding: 14px 24px; background: transparent; border: none;
+    border-bottom: 2px solid transparent; color: var(--text-dim);
+    font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text-secondary); }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--accent-blue); }
+  .tab-dot {
+    width: 8px; height: 8px; border-radius: 4px; background: var(--text-faint);
+  }
+  .tab-dot.on { background: var(--accent-green); box-shadow: 0 0 6px #00e67666; }
+  .tab-spacer { flex: 1; }
+  .tab-toggle-area { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+  .tab-toggle-label { font-size: 11px; color: var(--text-secondary); }
+
+  /* ── Toggle ── */
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px; background: var(--border-dim);
+    display: flex; align-items: center; padding: 2px; cursor: pointer; transition: background 0.2s;
+    border: none;
+  }
+  .toggle.on { background: var(--accent-green); }
+  .toggle-knob {
+    width: 20px; height: 20px; border-radius: 10px; background: #fff;
+    transition: transform 0.2s;
+  }
+  .toggle.on .toggle-knob { transform: translateX(20px); }
+
+  /* ── Content ── */
+  .content { padding: 24px; max-width: 960px; margin: 0 auto; }
+  .module { display: none; flex-direction: column; gap: 16px; }
+  .module.active { display: flex; }
+
+  /* ── Stat Cards ── */
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--bg-card); border-radius: 10px; padding: 14px 16px;
+    border: 1px solid var(--border); flex: 1; min-width: 130px;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--text-secondary); letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 6px; font-family: var(--font-mono);
+  }
+  .stat-value { font-size: 22px; font-weight: 700; font-family: var(--font-data); }
+  .stat-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  /* ── Config Panel ── */
+  .panel {
+    background: var(--bg-card); border-radius: 10px; padding: 20px;
+    border: 1px solid var(--border);
+  }
+  .panel-title {
+    margin: 0 0 16px; font-size: 14px; color: #aaa; letter-spacing: 1px;
+    text-transform: uppercase; font-family: var(--font-mono);
+  }
+  .config-rows { display: flex; flex-direction: column; gap: 14px; }
+  .config-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .config-label { font-size: 13px; color: #ccc; min-width: 140px; }
+  .config-options { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .config-btn {
+    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border-dim);
+    background: transparent; color: var(--text-secondary); font-size: 12px;
+    cursor: pointer; font-family: var(--font-data); transition: all 0.15s;
+  }
+  .config-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+  .config-btn.active {
+    border-color: var(--accent-blue); background: #64b5f622; color: var(--accent-blue);
+  }
+
+  /* ── Tables ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-data); }
+  .data-table thead tr {
+    color: var(--text-dim); text-align: left; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .data-table th { padding: 8px 0; font-weight: 400; }
+  .data-table td { padding: 10px 0; }
+  .data-table tbody tr { border-top: 1px solid var(--border); }
+
+  .c-green { color: var(--accent-green); }
+  .c-blue { color: var(--accent-blue); }
+  .c-yellow { color: var(--accent-yellow); }
+  .c-red { color: var(--accent-red); }
+  .c-dim { color: var(--text-dim); }
+  .c-sec { color: var(--text-secondary); }
+  .c-pri { color: var(--text-primary); }
+  .fw-bold { font-weight: 700; }
+
+  /* ── Signal Cards ── */
+  .signal-list { display: flex; flex-direction: column; gap: 8px; }
+  .signal {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: var(--bg-card-inner); border-radius: 8px;
+  }
+  .signal.strong { border: 1px solid #00e67633; }
+  .signal.moderate { border: 1px solid #ffc10733; }
+  .signal-left { display: flex; align-items: center; gap: 12px; }
+  .signal-ticker {
+    font-weight: 700; font-size: 14px; color: var(--text-primary);
+    font-family: var(--font-data); width: 50px;
+  }
+  .signal-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-mono);
+  }
+  .signal-badge.strong { background: #00e67622; color: var(--accent-green); }
+  .signal-badge.moderate { background: #ffc10722; color: var(--accent-yellow); }
+  .signal-catalyst { font-size: 12px; color: var(--text-secondary); }
+  .signal-right { display: flex; align-items: center; gap: 16px; }
+  .signal-vol { font-size: 12px; color: var(--text-secondary); font-family: var(--font-data); }
+  .signal-change { font-size: 14px; font-weight: 700; color: var(--accent-green); font-family: var(--font-data); }
+
+  /* ── Footer ── */
+  .footer {
+    padding: 12px 24px; border-top: 1px solid var(--bg-card);
+    display: flex; justify-content: space-between; font-size: 11px;
+    color: var(--text-faint); font-family: var(--font-mono);
+    position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-deep);
+  }
+
+  @media (max-width: 640px) {
+    .stat-card { min-width: 100%; }
+    .config-row { flex-direction: column; align-items: flex-start; }
+    .config-options { justify-content: flex-start; }
+    .tab { padding: 12px 14px; font-size: 12px; }
+    .signal { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .signal-right { width: 100%; justify-content: space-between; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">◈</div>
+    <span class="header-title">TradeEngine</span>
+    <span class="header-badge">PERSONAL</span>
+  </div>
+  <div class="header-right">
+    <span class="header-status">IBKR Connected</span>
+    <div class="status-dot"></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-module="day" onclick="switchModule('day')">
+    <span>⚡</span><span>Day Trader</span><div class="tab-dot on" id="dot-day"></div>
+  </button>
+  <button class="tab" data-module="swing" onclick="switchModule('swing')">
+    <span>🔄</span><span>Swing Trader</span><div class="tab-dot on" id="dot-swing"></div>
+  </button>
+  <button class="tab" data-module="scanner" onclick="switchModule('scanner')">
+    <span>🔍</span><span>Scanner Bot</span><div class="tab-dot" id="dot-scanner"></div>
+  </button>
+  <div class="tab-spacer"></div>
+  <div class="tab-toggle-area">
+    <span class="tab-toggle-label" id="toggle-label">Module ON</span>
+    <button class="toggle on" id="module-toggle" onclick="toggleModule()">
+      <div class="toggle-knob"></div>
+    </button>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+
+  <!-- ═══ DAY TRADER ═══ -->
+  <div class="module active" id="mod-day">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Today P&L</div>
+        <div class="stat-value c-green">+$42.18</div>
+        <div class="stat-sub">4 trades</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value c-blue">75%</div>
+        <div class="stat-sub">3 / 4</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Position</div>
+        <div class="stat-value">$0</div>
+        <div class="stat-sub">No open positions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Account</div>
+        <div class="stat-value">$142.18</div>
+        <div class="stat-sub">Started $100</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Automation Rules</h3>
+      <div class="config-rows">
+        <div class="config-row">
+          <span class="config-label">Buy Window</span>
+          <div class="config-options" data-group="day-buyWindow">
+            <button class="config-btn active" onclick="selectConfig(this)">9:30–9:45 AM</button>
+            <button class="config-btn" onclick="selectConfig(this)">9:30–10:00 AM</button>
+            <button class="config-btn" onclick="selectConfig(this)">9:45–10:15 AM</button>
+            <button class="config-btn" onclick="selectConfig(this)">10:00–10:30 AM</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Stop-Loss Type</span>
+          <div class="config-options" data-group="day-stopType">
+            <button class="config-btn" onclick="selectConfig(this)">Fixed %</button>
+            <button class="config-btn active" onclick="selectConfig(this)">Trailing %</button>
+            <button class="config-btn" onclick="selectConfig(this)">Time-based</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Stop-Loss %</span>
+          <div class="config-options" data-group="day-stopPct">
+            <button class="config-btn" onclick="selectConfig(this)">1%</button>
+            <button class="config-btn active" onclick="selectConfig(this)">2%</button>
+            <button class="config-btn" onclick="selectConfig(this)">3%</button>
+            <button class="config-btn" onclick="selectConfig(this)">5%</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Max Position Size</span>
+          <div class="config-options" data-group="day-maxPos">
+            <button class="config-btn" onclick="selectConfig(this)">$25</button>
+            <button class="config-btn" onclick="selectConfig(this)">$50</button>
+            <button class="config-btn active" onclick="selectConfig(this)">$100</button>
+            <button class="config-btn" onclick="selectConfig(this)">All-in</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Exit By</span>
+          <div class="config-options" data-group="day-exitBy">
+            <button class="config-btn" onclick="selectConfig(this)">11:30 AM</button>
+            <button class="config-btn" onclick="selectConfig(this)">1:00 PM</button>
+            <button class="config-btn" onclick="selectConfig(this)">3:00 PM</button>
+            <button class="config-btn active" onclick="selectConfig(this)">3:55 PM</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Trade Log</h3>
+      <table class="data-table">
+        <thead><tr><th>Time</th><th>Ticker</th><th>Action</th><th>Qty</th><th>Price</th><th>P&L</th></tr></thead>
+        <tbody>
+          <tr><td class="c-sec">9:32 AM</td><td class="fw-bold c-pri">NVDA</td><td class="c-blue">BUY</td><td class="c-sec">1</td><td class="c-pri">$892.10</td><td class="c-dim">—</td></tr>
+          <tr><td class="c-sec">9:47 AM</td><td class="fw-bold c-pri">NVDA</td><td class="c-yellow">SELL</td><td class="c-sec">1</td><td class="c-pri">$904.30</td><td class="c-green">+$12.20</td></tr>
+          <tr><td class="c-sec">10:01 AM</td><td class="fw-bold c-pri">AAPL</td><td class="c-blue">BUY</td><td class="c-sec">2</td><td class="c-pri">$178.50</td><td class="c-dim">—</td></tr>
+          <tr><td class="c-sec">10:22 AM</td><td class="fw-bold c-pri">AAPL</td><td class="c-yellow">SELL</td><td class="c-sec">2</td><td class="c-pri">$181.89</td><td class="c-green">+$6.78</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ SWING TRADER ═══ -->
+  <div class="module" id="mod-swing">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Open Positions</div>
+        <div class="stat-value c-yellow">2</div>
+        <div class="stat-sub">MSFT, AMD</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unrealized P&L</div>
+        <div class="stat-value c-green">+$78.40</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Hold Time</div>
+        <div class="stat-value">3.2d</div>
+        <div class="stat-sub">Target: 2–7 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cycle Accuracy</div>
+        <div class="stat-value c-blue">68%</div>
+        <div class="stat-sub">Last 25 trades</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Auto-Sell Rules</h3>
+      <div class="config-rows">
+        <div class="config-row">
+          <span class="config-label">Sell at Profit %</span>
+          <div class="config-options" data-group="swing-profit">
+            <button class="config-btn" onclick="selectConfig(this)">3%</button>
+            <button class="config-btn active" onclick="selectConfig(this)">5%</button>
+            <button class="config-btn" onclick="selectConfig(this)">8%</button>
+            <button class="config-btn" onclick="selectConfig(this)">10%</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Stop-Loss %</span>
+          <div class="config-options" data-group="swing-stop">
+            <button class="config-btn" onclick="selectConfig(this)">2%</button>
+            <button class="config-btn active" onclick="selectConfig(this)">3%</button>
+            <button class="config-btn" onclick="selectConfig(this)">5%</button>
+            <button class="config-btn" onclick="selectConfig(this)">7%</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Max Hold Days</span>
+          <div class="config-options" data-group="swing-hold">
+            <button class="config-btn" onclick="selectConfig(this)">3 days</button>
+            <button class="config-btn" onclick="selectConfig(this)">5 days</button>
+            <button class="config-btn active" onclick="selectConfig(this)">7 days</button>
+            <button class="config-btn" onclick="selectConfig(this)">14 days</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Open Positions</h3>
+      <table class="data-table">
+        <thead><tr><th>Ticker</th><th>Entry</th><th>Current</th><th>P&L</th><th>Target</th><th>Days</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="fw-bold c-pri">MSFT</td><td class="c-sec">$415.20</td><td class="c-pri">$424.80</td>
+            <td class="c-green">+$9.60 (2.3%)</td><td class="c-yellow">$435.96</td><td class="c-sec">2d</td>
+          </tr>
+          <tr>
+            <td class="fw-bold c-pri">AMD</td><td class="c-sec">$162.50</td><td class="c-pri">$171.30</td>
+            <td class="c-green">+$8.80 (5.4%)</td><td class="c-green">$170.63 ✓</td><td class="c-sec">4d</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ SCANNER BOT ═══ -->
+  <div class="module" id="mod-scanner">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-label">Stocks Scanned</div>
+        <div class="stat-value">2,847</div>
+        <div class="stat-sub">Last scan: 2m ago</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Signals Found</div>
+        <div class="stat-value c-yellow">7</div>
+        <div class="stat-sub">3 strong, 4 moderate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Auto-Trades Today</div>
+        <div class="stat-value">1</div>
+        <div class="stat-sub">$100 deployed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Bot P&L (All Time)</div>
+        <div class="stat-value c-green">+$23.41</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Scan Filters</h3>
+      <div class="config-rows">
+        <div class="config-row">
+          <span class="config-label">Catalyst Type</span>
+          <div class="config-options" data-group="scan-catalyst">
+            <button class="config-btn" onclick="selectConfig(this)">Earnings Beat</button>
+            <button class="config-btn" onclick="selectConfig(this)">Positive News</button>
+            <button class="config-btn" onclick="selectConfig(this)">Cycle Upturn</button>
+            <button class="config-btn active" onclick="selectConfig(this)">All</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Min Volume Spike</span>
+          <div class="config-options" data-group="scan-vol">
+            <button class="config-btn active" onclick="selectConfig(this)">2x avg</button>
+            <button class="config-btn" onclick="selectConfig(this)">3x avg</button>
+            <button class="config-btn" onclick="selectConfig(this)">5x avg</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Price Range</span>
+          <div class="config-options" data-group="scan-price">
+            <button class="config-btn" onclick="selectConfig(this)">$5–$20</button>
+            <button class="config-btn" onclick="selectConfig(this)">$20–$100</button>
+            <button class="config-btn" onclick="selectConfig(this)">$100+</button>
+            <button class="config-btn active" onclick="selectConfig(this)">Any</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Auto-Buy Amount</span>
+          <div class="config-options" data-group="scan-buy">
+            <button class="config-btn active" onclick="selectConfig(this)">$100</button>
+            <button class="config-btn" onclick="selectConfig(this)">$250</button>
+            <button class="config-btn" onclick="selectConfig(this)">$500</button>
+            <button class="config-btn" onclick="selectConfig(this)">$1,000</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Profit Target</span>
+          <div class="config-options" data-group="scan-profit">
+            <button class="config-btn" onclick="selectConfig(this)">3%</button>
+            <button class="config-btn active" onclick="selectConfig(this)">5%</button>
+            <button class="config-btn" onclick="selectConfig(this)">8%</button>
+            <button class="config-btn" onclick="selectConfig(this)">10%</button>
+          </div>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Scan Interval</span>
+          <div class="config-options" data-group="scan-interval">
+            <button class="config-btn" onclick="selectConfig(this)">1 min</button>
+            <button class="config-btn active" onclick="selectConfig(this)">5 min</button>
+            <button class="config-btn" onclick="selectConfig(this)">15 min</button>
+            <button class="config-btn" onclick="selectConfig(this)">30 min</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Live Signals</h3>
+      <div class="signal-list">
+        <div class="signal strong">
+          <div class="signal-left">
+            <span class="signal-ticker">SMCI</span>
+            <span class="signal-badge strong">strong</span>
+            <span class="signal-catalyst">Earnings Beat</span>
+          </div>
+          <div class="signal-right">
+            <span class="signal-vol">Vol: 4.2x</span>
+            <span class="signal-change">+8.2%</span>
+          </div>
+        </div>
+        <div class="signal strong">
+          <div class="signal-left">
+            <span class="signal-ticker">PLTR</span>
+            <span class="signal-badge strong">strong</span>
+            <span class="signal-catalyst">Gov Contract</span>
+          </div>
+          <div class="signal-right">
+            <span class="signal-vol">Vol: 3.1x</span>
+            <span class="signal-change">+4.1%</span>
+          </div>
+        </div>
+        <div class="signal strong">
+          <div class="signal-left">
+            <span class="signal-ticker">RIVN</span>
+            <span class="signal-badge strong">strong</span>
+            <span class="signal-catalyst">Delivery #s</span>
+          </div>
+          <div class="signal-right">
+            <span class="signal-vol">Vol: 5.8x</span>
+            <span class="signal-change">+6.7%</span>
+          </div>
+        </div>
+        <div class="signal moderate">
+          <div class="signal-left">
+            <span class="signal-ticker">COIN</span>
+            <span class="signal-badge moderate">moderate</span>
+            <span class="signal-catalyst">Cycle Upturn</span>
+          </div>
+          <div class="signal-right">
+            <span class="signal-vol">Vol: 2.4x</span>
+            <span class="signal-change">+3.2%</span>
+          </div>
+        </div>
+        <div class="signal moderate">
+          <div class="signal-left">
+            <span class="signal-ticker">SQ</span>
+            <span class="signal-badge moderate">moderate</span>
+            <span class="signal-catalyst">Positive News</span>
+          </div>
+          <div class="signal-right">
+            <span class="signal-vol">Vol: 2.1x</span>
+            <span class="signal-change">+2.8%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>Paper trading mode · $100 test balance</span>
+  <span>Last sync: 2s ago</span>
+</div>
+
+<script>
+  let currentModule = 'day';
+  const moduleState = { day: true, swing: true, scanner: false };
+
+  function switchModule(id) {
+    currentModule = id;
+    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+    document.getElementById('mod-' + id).classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab[data-module="${id}"]`).classList.add('active');
+
+    const tog = document.getElementById('module-toggle');
+    const label = document.getElementById('toggle-label');
+    if (moduleState[id]) {
+      tog.classList.add('on');
+      label.textContent = 'Module ON';
+    } else {
+      tog.classList.remove('on');
+      label.textContent = 'Module OFF';
+    }
+  }
+
+  function toggleModule() {
+    moduleState[currentModule] = !moduleState[currentModule];
+    const tog = document.getElementById('module-toggle');
+    const dot = document.getElementById('dot-' + currentModule);
+    const label = document.getElementById('toggle-label');
+    if (moduleState[currentModule]) {
+      tog.classList.add('on');
+      dot.classList.add('on');
+      label.textContent = 'Module ON';
+    } else {
+      tog.classList.remove('on');
+      dot.classList.remove('on');
+      label.textContent = 'Module OFF';
+    }
+  }
+
+  function selectConfig(btn) {
+    const group = btn.parentElement;
+    group.querySelectorAll('.config-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
